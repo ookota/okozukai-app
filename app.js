@@ -1,3 +1,35 @@
+// --- 調査用コード 開始 ---
+(function () {
+    const debugArea = document.createElement('div');
+    debugArea.id = 'debug-log-area';
+    debugArea.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;z-index:9999;padding:5px;pointer-events:none;border-top:1px solid #0f0;';
+    document.body.appendChild(debugArea);
+
+    window.logToScreen = function (msg) {
+        const line = document.createElement('div');
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        debugArea.appendChild(line);
+        debugArea.scrollTop = debugArea.scrollHeight;
+        console.log(msg);
+    };
+
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+        window.logToScreen(`❌ エラー発生: ${msg} (行:${lineNo} 列:${columnNo})`);
+        return false;
+    };
+
+    // ボタンクリックの監視
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('button');
+        if (btn) {
+            window.logToScreen(`👆 クリックされました: ${btn.id || btn.className || 'ボタン'}`);
+        }
+    }, true);
+
+    window.logToScreen('🚀 調査用コード 読み込み完了');
+})();
+// --- 調査用コード 終了 ---
+
 // 状態管理
 let currentUser = localStorage.getItem('last_user') || 'masamune';
 
@@ -99,6 +131,7 @@ const dailyAmountDisplay = document.getElementById('daily-amount');
 const dailyPlanArea = document.getElementById('daily-plan');
 
 async function init() {
+    window.logToScreen('⚙️ init() 開始');
     loadFromLocalStorage(); // まずローカルデータを読み込んでUIを反応させる
     applyTheme();
     updateUI();
@@ -149,14 +182,35 @@ async function init() {
     });
     document.getElementById('btn-confirm').addEventListener('click', confirmInput);
     document.getElementById('btn-claim-money').addEventListener('click', claimPendingAmount);
+
+    window.logToScreen('✅ 初期化完了');
+}
+
+// LocalStorageからデータを読み込む（高速・確実）
+function loadFromLocalStorage() {
+    window.logToScreen('💾 LocalStorageから読み込み中...');
+    const saved = localStorage.getItem('all_users_data');
+    if (saved) {
+        try {
+            allUsersData = JSON.parse(saved);
+            expandCurrentUserData();
+            window.logToScreen('💾 ローカルデータ読み込み成功');
+        } catch (e) {
+            window.logToScreen('❌ LocalStorage parse error');
+        }
+    }
 }
 
 // データ読み込み（初期化時・定期実行）
 async function loadAllData() {
     const placeholder = 'ここにコピーしたURLを貼り付けてください';
-    if (!GAS_URL || GAS_URL === placeholder) return;
+    if (!GAS_URL || GAS_URL === placeholder) {
+        window.logToScreen('⚠️ GAS_URLが設定されていません');
+        return;
+    }
 
     try {
+        window.logToScreen('☁️ GASからデータを取得中...');
         const response = await fetch(GAS_URL);
         if (!response.ok) throw new Error('GAS fetch failed');
         const data = await response.json();
@@ -165,9 +219,10 @@ async function loadAllData() {
             localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
             expandCurrentUserData();
             updateUI();
+            window.logToScreen('☁️ GAS連携成功');
         }
     } catch (e) {
-        console.warn('Sync from GAS failed, using local data:', e);
+        window.logToScreen('⚠️ GAS同期失敗 (オフライン動作中)');
     }
 }
 
@@ -221,15 +276,16 @@ async function saveAllData() {
             body: JSON.stringify(allUsersData)
         });
         localStorage.removeItem('pending_sync');
+        window.logToScreen('☁️ データを保存しました');
     } catch (e) {
-        console.warn('GAS sync failed:', e);
+        window.logToScreen('⚠️ 保存失敗 (あとで同期します)');
         localStorage.setItem('pending_sync', 'true');
     }
 }
 
 // オンライン復帰時に自動同期
 window.addEventListener('online', () => {
-    console.log('Online! Attempting sync...');
+    window.logToScreen('🌐 オンラインに戻りました');
     if (localStorage.getItem('pending_sync')) {
         saveAllData();
     }
@@ -237,6 +293,7 @@ window.addEventListener('online', () => {
 
 async function switchUser(user) {
     if (currentUser === user) return;
+    window.logToScreen(`👤 ユーザー切り替え: ${user}`);
     currentUser = user;
     await loadAllData(); // データの切り替え完了を待機
     applyTheme();
