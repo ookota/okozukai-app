@@ -2,7 +2,7 @@
 let currentUser = localStorage.getItem('last_user') || 'masamune';
 
 // Google Apps Script の Web アプリ URL (デプロイ後にここに貼り付けてください)
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwQkLBkAR7-xtxrqBedmHY8WYZuoee92WF7i9kA18wL7qnOhEiovcF757OYOL9ruIK1/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzjqvg3Oa7n10aFQQQ3bpNC5wkVO1ESwCfuf0Qlte9pu68_dD5lO-fILEhwUL2yN_Q9/exec';
 
 // ユーザーごとの初期設定
 const defaultHelpMaster = [
@@ -151,59 +151,32 @@ async function init() {
     document.getElementById('btn-claim-money').addEventListener('click', claimPendingAmount);
 }
 
-// LocalStorageからデータを読み込む（高速・確実）
-function loadFromLocalStorage() {
-    const saved = localStorage.getItem('all_users_data');
-    if (saved) {
-        try {
-            allUsersData = JSON.parse(saved);
-            expandCurrentUserData();
-        } catch (e) {
-            console.error('LocalStorage parse error', e);
-        }
-    }
-}
-
-// サーバーまたはGASから全データを読み込む（非同期）
+// データ読み込み（初期化時・定期実行）
 async function loadAllData() {
     const placeholder = 'ここにコピーしたURLを貼り付けてください';
-    if (!GAS_URL || GAS_URL === placeholder) {
-        console.warn('GAS_URL is not set.');
-        return;
-    }
+    if (!GAS_URL || GAS_URL === placeholder) return;
 
     try {
-        console.log('Fetching from GAS...');
-        // タイムアウト付きのフェッチ（10秒）
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        const response = await fetch(GAS_URL, { signal: controller.signal });
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-            const freshData = await response.json();
-            if (freshData && Object.keys(freshData).length > 0) {
-                allUsersData = freshData;
-                localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
-                console.log('Loaded from Google Sheets');
-                expandCurrentUserData();
-                updateUI();
-            }
-        } else {
-            throw new Error(`GAS returned ${response.status}`);
+        const response = await fetch(GAS_URL);
+        if (!response.ok) throw new Error('GAS fetch failed');
+        const data = await response.json();
+        if (data && Object.keys(data).length > 0) {
+            allUsersData = data;
+            localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
+            expandCurrentUserData();
+            updateUI();
         }
     } catch (e) {
-        console.warn('Sync from GAS failed:', e.name === 'AbortError' ? 'Timeout' : e.message);
+        console.warn('Sync from GAS failed, using local data:', e);
     }
 }
 
-// 現在のユーザーのデータを変数に展開する
+// データの展開
 function expandCurrentUserData() {
     const userKey = `user_data_${currentUser}`;
     if (allUsersData[userKey]) {
         userData = allUsersData[userKey];
-        // お手伝いマスタの強制同期
+        // お手伝いマスタの同期
         if (!userData.helpMaster) userData.helpMaster = [];
         defaultHelpMaster.forEach(defItem => {
             const existing = userData.helpMaster.find(t => t.id === defItem.id);
@@ -215,9 +188,6 @@ function expandCurrentUserData() {
                 userData.helpMaster.push(JSON.parse(JSON.stringify(defItem)));
             }
         });
-        userData.helpMaster = userData.helpMaster.filter(item =>
-            defaultHelpMaster.some(def => def.id === item.id)
-        );
     } else {
         // 初期化
         userData = {
@@ -237,8 +207,6 @@ function expandCurrentUserData() {
 async function saveAllData() {
     const userKey = `user_data_${currentUser}`;
     allUsersData[userKey] = userData;
-
-    // LocalStorageにまず保存（即時）
     localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
     localStorage.setItem('last_user', currentUser);
 
@@ -246,19 +214,15 @@ async function saveAllData() {
     if (!GAS_URL || GAS_URL === placeholder) return;
 
     try {
-        console.log('Syncing to Google Sheets...');
-        // GASへの送信（POST）
+        // GASウェブアプリはOPTIONS(プリフライト)要求に弱いため、
+        // Content-Typeヘッダーをあえて送らず「シンプルなリクエスト」として送信します
         await fetch(GAS_URL, {
             method: 'POST',
-            mode: 'no-cors', // 重要：CORSエラー回避
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(allUsersData)
         });
-
         localStorage.removeItem('pending_sync');
-        console.log('Synced successfully to Google Sheets');
     } catch (e) {
-        console.warn('Sync to Google Sheets failed:', e);
+        console.warn('GAS sync failed:', e);
         localStorage.setItem('pending_sync', 'true');
     }
 }
@@ -606,5 +570,5 @@ function playSpecialEffect(text) {
     setTimeout(() => overlay.remove(), 2000);
 }
 
-// 実行開始
-init();
+// 実行開始 (ここを以下に書き換えてください)
+window.addEventListener('DOMContentLoaded', init);
