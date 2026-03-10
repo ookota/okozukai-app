@@ -1,13 +1,14 @@
-const CACHE_NAME = 'okozukai-app-v1';
+const CACHE_NAME = 'okozukai-app-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json',
-  '/icon-train.png',
-  '/icon-pokemon.png',
-  '/icon-family.png'
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.json',
+  './icon-train.png',
+  './icon-pokemon.png',
+  './icon-family.png',
+  './favicon.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -29,8 +30,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // APIへのリクエストはキャッシュしない（アプリ側でIndexedDB等で制御するため）
-  if (event.request.url.includes('/api/')) {
+  // Google Apps Script へのリクエストはキャッシュしない
+  if (event.request.url.includes('script.google.com')) {
     return;
   }
 

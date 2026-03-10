@@ -130,6 +130,29 @@ const goalDateInput = document.getElementById('goal-target-date');
 const dailyAmountDisplay = document.getElementById('daily-amount');
 const dailyPlanArea = document.getElementById('daily-plan');
 
+/**
+ * 画面（モーダル）の切り替えを行う共通関数
+ * @param {string} pageId - 表示したい要素のID
+ */
+function showPage(pageId) {
+    window.logToScreen(`📺 Page切り替え: ${pageId}`);
+
+    // 全てのモーダルを一旦隠す
+    const modals = [helpModal, numpadModal, settingsModal];
+    modals.forEach(m => {
+        if (m) m.classList.add('hidden');
+    });
+
+    // 指定されたIDを表示する
+    const target = document.getElementById(pageId);
+    if (target) {
+        target.classList.remove('hidden');
+        window.logToScreen(`✅ ${pageId} を表示しました`);
+    } else {
+        window.logToScreen(`⚠️ ${pageId} が見つかりませんでした`);
+    }
+}
+
 async function init() {
     window.logToScreen('⚙️ init() 開始');
     loadFromLocalStorage(); // まずローカルデータを読み込んでUIを反応させる
@@ -142,25 +165,44 @@ async function init() {
     // 定期的な同期（30秒ごと）
     setInterval(loadAllData, 30000);
 
-    // イベントリスナー
-    document.getElementById('btn-train').addEventListener('click', () => switchUser('masamune'));
-    document.getElementById('btn-pokemon').addEventListener('click', () => switchUser('momoyo'));
+    // イベントリスナー（安全な初期化）
+    initEventListeners();
 
-    document.getElementById('btn-deposit-menu').addEventListener('click', openHelpModal);
-    document.getElementById('btn-withdraw').addEventListener('click', () => openNumpadModal('withdraw'));
-    document.getElementById('btn-close-modal').addEventListener('click', closeModals);
-    document.getElementById('btn-close-help').addEventListener('click', closeModals);
-    document.getElementById('btn-help-other').addEventListener('click', () => {
-        closeModals();
-        openNumpadModal('deposit');
-    });
+    window.logToScreen('✅ 初期化完了');
+}
 
-    document.getElementById('btn-settings-toggle').addEventListener('click', openSettingsModal);
-    document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
-    document.getElementById('btn-apply-balance').addEventListener('click', applyBalanceAdjustment);
-    document.getElementById('btn-edit-balance').addEventListener('click', () => openNumpadModal('adjust'));
+function initEventListeners() {
+    window.logToScreen('👂 イベントリスナー登録開始');
 
-    // 目標設定
+    const clickEvents = {
+        'btn-train': () => switchUser('masamune'),
+        'btn-pokemon': () => switchUser('momoyo'),
+        'btn-deposit-menu': () => showPage('help-modal'),
+        'btn-withdraw': () => openNumpadModal('withdraw'),
+        'btn-close-modal': closeModals,
+        'btn-close-help': closeModals,
+        'btn-help-other': () => openNumpadModal('deposit'),
+        'btn-settings-toggle': () => showPage('settings-modal'),
+        'btn-save-settings': saveSettings,
+        'btn-apply-balance': applyBalanceAdjustment,
+        'btn-edit-balance': () => openNumpadModal('adjust'),
+        'btn-confirm': confirmInput,
+        'btn-claim-money': claimPendingAmount
+    };
+
+    for (const [id, handler] of Object.entries(clickEvents)) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', () => {
+                window.logToScreen(`🖱️ Event: ${id}`);
+                handler();
+            });
+        } else {
+            window.logToScreen(`⚠️ Element not found: ${id}`);
+        }
+    }
+
+    // 目標設定の入力系
     goalNameInput.addEventListener('input', (e) => {
         userData.goalName = e.target.value;
         saveAllData();
@@ -180,37 +222,30 @@ async function init() {
     keyboardInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') confirmInput();
     });
-    document.getElementById('btn-confirm').addEventListener('click', confirmInput);
-    document.getElementById('btn-claim-money').addEventListener('click', claimPendingAmount);
-
-    window.logToScreen('✅ 初期化完了');
 }
 
-// LocalStorageからデータを読み込む（高速・確実）
+// LocalStorageからデータを読み込む
 function loadFromLocalStorage() {
-    window.logToScreen('💾 LocalStorageから読み込み中...');
+    window.logToScreen('💾 LocalStorage読み込み中...');
     const saved = localStorage.getItem('all_users_data');
     if (saved) {
         try {
             allUsersData = JSON.parse(saved);
             expandCurrentUserData();
-            window.logToScreen('💾 ローカルデータ読み込み成功');
+            window.logToScreen('💾 ローカルデータ成功');
         } catch (e) {
             window.logToScreen('❌ LocalStorage parse error');
         }
     }
 }
 
-// データ読み込み（初期化時・定期実行）
+// データ読み込み（GAS同期）
 async function loadAllData() {
     const placeholder = 'ここにコピーしたURLを貼り付けてください';
-    if (!GAS_URL || GAS_URL === placeholder) {
-        window.logToScreen('⚠️ GAS_URLが設定されていません');
-        return;
-    }
+    if (!GAS_URL || GAS_URL === placeholder) return;
 
     try {
-        window.logToScreen('☁️ GASからデータを取得中...');
+        window.logToScreen('☁️ GAS取得開始...');
         const response = await fetch(GAS_URL);
         if (!response.ok) throw new Error('GAS fetch failed');
         const data = await response.json();
@@ -222,7 +257,7 @@ async function loadAllData() {
             window.logToScreen('☁️ GAS連携成功');
         }
     } catch (e) {
-        window.logToScreen('⚠️ GAS同期失敗 (オフライン動作中)');
+        window.logToScreen('⚠️ GAS同期なし (オフライン動作)');
     }
 }
 
@@ -231,7 +266,6 @@ function expandCurrentUserData() {
     const userKey = `user_data_${currentUser}`;
     if (allUsersData[userKey]) {
         userData = allUsersData[userKey];
-        // お手伝いマスタの同期
         if (!userData.helpMaster) userData.helpMaster = [];
         defaultHelpMaster.forEach(defItem => {
             const existing = userData.helpMaster.find(t => t.id === defItem.id);
@@ -244,7 +278,6 @@ function expandCurrentUserData() {
             }
         });
     } else {
-        // 初期化
         userData = {
             balance: 0,
             history: [],
@@ -258,44 +291,39 @@ function expandCurrentUserData() {
     }
 }
 
-// サーバーとLocalStorageに全データを保存する
+// データの保存
 async function saveAllData() {
     const userKey = `user_data_${currentUser}`;
     allUsersData[userKey] = userData;
     localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
     localStorage.setItem('last_user', currentUser);
 
-    const placeholder = 'ここにコピーしたURLを貼り付けてください';
-    if (!GAS_URL || GAS_URL === placeholder) return;
+    if (!GAS_URL || GAS_URL.includes('貼り付けてください')) return;
 
     try {
-        // GASウェブアプリはOPTIONS(プリフライト)要求に弱いため、
-        // Content-Typeヘッダーをあえて送らず「シンプルなリクエスト」として送信します
         await fetch(GAS_URL, {
             method: 'POST',
             body: JSON.stringify(allUsersData)
         });
         localStorage.removeItem('pending_sync');
-        window.logToScreen('☁️ データを保存しました');
+        window.logToScreen('☁️ 保存成功');
     } catch (e) {
-        window.logToScreen('⚠️ 保存失敗 (あとで同期します)');
+        window.logToScreen('⚠️ 保存失敗 (要同期)');
         localStorage.setItem('pending_sync', 'true');
     }
 }
 
-// オンライン復帰時に自動同期
+// オンライン復帰
 window.addEventListener('online', () => {
-    window.logToScreen('🌐 オンラインに戻りました');
-    if (localStorage.getItem('pending_sync')) {
-        saveAllData();
-    }
+    window.logToScreen('🌐 通信復帰');
+    if (localStorage.getItem('pending_sync')) saveAllData();
 });
 
 async function switchUser(user) {
     if (currentUser === user) return;
-    window.logToScreen(`👤 ユーザー切り替え: ${user}`);
+    window.logToScreen(`👤 ユーザー切替: ${user}`);
     currentUser = user;
-    await loadAllData(); // データの切り替え完了を待機
+    await loadAllData();
     applyTheme();
     updateUI();
 }
@@ -334,30 +362,21 @@ function applyTheme() {
 function updateBackground() {
     const bgLayer = document.getElementById('bg-layer');
     if (!bgLayer) return;
-
     bgLayer.innerHTML = '';
     if (currentUser !== 'masamune') return;
 
-    const images = [
-        'pla_01.png', 'pla_02.png', 'pla_03.png', 'pla_04.png', 'pla_05.png',
-        'pla_06.png', 'pla_07.png', 'pla_08.png', 'pla_09.png', 'pla_10.png'
-    ];
-
-    const tileSize = 80; // CSSと合わせる
+    const images = ['pla_01.png', 'pla_02.png', 'pla_03.png', 'pla_04.png', 'pla_05.png', 'pla_06.png', 'pla_07.png', 'pla_08.png', 'pla_09.png', 'pla_10.png'];
+    const tileSize = 80;
     const cols = Math.ceil(window.innerWidth / tileSize);
     const rows = Math.ceil(window.innerHeight / tileSize);
-    const totalTiles = cols * rows;
-
-    for (let i = 0; i < totalTiles; i++) {
+    for (let i = 0; i < cols * rows; i++) {
         const img = document.createElement('img');
-        const randomImg = images[Math.floor(Math.random() * images.length)];
-        img.src = `画像/${randomImg}`;
+        img.src = `画像/${images[Math.floor(Math.random() * images.length)]}`;
         img.className = 'pla-tile';
         bgLayer.appendChild(img);
     }
 }
 
-// 画面サイズ変更時にも再計算
 window.addEventListener('resize', updateBackground);
 
 function updateUI() {
@@ -366,11 +385,9 @@ function updateUI() {
     const pending = Number(userData.pendingAmount) || 0;
 
     balanceAmount.textContent = balance.toLocaleString();
-    const remaining = Math.max(0, goalAmount - balance);
-    remainingDisplay.textContent = remaining.toLocaleString();
+    remainingDisplay.textContent = Math.max(0, goalAmount - balance).toLocaleString();
     goalLabelEnd.textContent = goalAmount.toLocaleString() + '円';
 
-    // もらう予定
     const pendingEl = document.getElementById('pending-amount');
     if (pendingEl) pendingEl.textContent = pending.toLocaleString();
 
@@ -379,11 +396,9 @@ function updateUI() {
         const actualIndex = userData.history.length - 1 - index;
         const li = document.createElement('li');
         li.className = `history-item ${item.type === 'withdraw' ? 'minus' : 'plus'}`;
-        const reason = item.reason ? `(${item.reason})` : '';
-
         li.innerHTML = `
             <div class="history-content">
-                <span>${item.date} ${reason}</span>
+                <span>${item.date} ${item.reason || ''}</span>
                 <span>${item.type === 'withdraw' ? '-' : '+'}${item.amount.toLocaleString()}円</span>
             </div>
             <button class="btn-delete" onclick="deleteHistoryItem(${actualIndex})">×</button>
@@ -401,25 +416,15 @@ function calculateDailyPlan() {
         dailyPlanArea.style.display = 'none';
         return;
     }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const targetDate = new Date(userData.goalDate);
-    targetDate.setHours(0, 0, 0, 0);
-
-    const timeDiff = targetDate.getTime() - today.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const targetDate = new Date(userData.goalDate); targetDate.setHours(0, 0, 0, 0);
+    const daysDiff = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
 
     if (daysDiff <= 0) {
         dailyAmountDisplay.textContent = '-';
-        dailyPlanArea.style.display = 'block';
-        return;
+    } else {
+        dailyAmountDisplay.textContent = Math.ceil((userData.goalAmount - userData.balance) / daysDiff).toLocaleString();
     }
-
-    const remaining = userData.goalAmount - userData.balance;
-    const dailyNeeded = Math.ceil(remaining / daysDiff);
-
-    dailyAmountDisplay.textContent = dailyNeeded.toLocaleString();
     dailyPlanArea.style.display = 'block';
 }
 
@@ -440,16 +445,11 @@ function checkGoalReached() {
 }
 
 function updateProgress() {
-    const balance = Number(userData.balance) || 0;
-    const goal = Number(userData.goalAmount) || 1000;
-    const progress = Math.min(100, (balance / goal) * 100);
-
+    const progress = Math.min(100, (userData.balance / userData.goalAmount) * 100);
     if (progressCharacter) {
         progressCharacter.style.left = `${progress}%`;
-
-        if (currentUser === 'masamune') {
-            progressCharacter.textContent = '🚃';
-        } else {
+        if (currentUser === 'masamune') progressCharacter.textContent = '🚃';
+        else {
             if (progress < 25) progressCharacter.textContent = '🥚';
             else if (progress < 50) progressCharacter.textContent = '🐣';
             else if (progress < 75) progressCharacter.textContent = '🐭';
@@ -458,54 +458,20 @@ function updateProgress() {
     }
 }
 
-// モーダル管理
-function openHelpModal() {
-    helpOptionsContainer.innerHTML = '';
-    userData.helpMaster.forEach(task => {
-        const btn = document.createElement('button');
-        btn.className = `help-opt-btn ${task.special ? 'special' : ''}`;
-        btn.innerHTML = `${task.icon} ${task.name}<br><small>${task.price}円</small>`;
-        btn.onclick = () => {
-            closeModals();
-            confirmDeposit(task.price, task.name);
-        };
-        helpOptionsContainer.appendChild(btn);
-    });
-    helpModal.classList.remove('hidden');
-}
-
 function openNumpadModal(mode) {
     inputMode = mode;
     keyboardInput.value = '';
-    if (mode === 'deposit') modalTitle.textContent = 'はいったお金';
-    else if (mode === 'withdraw') modalTitle.textContent = 'つかったお金';
-    else modalTitle.textContent = '残高をなおす';
-    numpadModal.classList.remove('hidden');
-    setTimeout(() => keyboardInput.focus(), 100); // すぐにフォーカス
-}
-
-function openSettingsModal() {
-    adjustBalanceInput.value = userData.balance;
-    settingsListContainer.innerHTML = '';
-    userData.helpMaster.forEach(task => {
-        const div = document.createElement('div');
-        div.className = 'settings-item';
-        div.innerHTML = `<span>${task.icon} ${task.name}</span><div><input type="number" value="${task.price}" data-id="${task.id}"> 円</div>`;
-        settingsListContainer.appendChild(div);
-    });
-    settingsModal.classList.remove('hidden');
+    const titles = { withdraw: 'つかったお金', deposit: 'はいったお金', adjust: '残高をなおす' };
+    modalTitle.textContent = titles[mode] || 'しゅうせい';
+    showPage('numpad-modal');
+    setTimeout(() => keyboardInput.focus(), 100);
 }
 
 function applyBalanceAdjustment() {
-    const newVal = parseInt(adjustBalanceInput.value);
+    const newVal = parseInt(document.getElementById('adjust-balance-input').value);
     if (!isNaN(newVal)) {
         userData.balance = newVal;
-        userData.history.push({
-            type: 'adjust',
-            amount: newVal,
-            reason: '設定での調整',
-            date: getTodayStr()
-        });
+        userData.history.push({ type: 'adjust', amount: newVal, reason: '設定での調整', date: getTodayStr() });
         saveAllData();
         updateUI();
         alert('残高を書きかえました！');
@@ -524,9 +490,8 @@ function saveSettings() {
 }
 
 function closeModals() {
-    helpModal.classList.add('hidden');
-    numpadModal.classList.add('hidden');
-    settingsModal.classList.add('hidden');
+    window.logToScreen('🏠 モーダルを閉じます');
+    [helpModal, numpadModal, settingsModal].forEach(m => m.classList.add('hidden'));
 }
 
 function confirmInput() {
@@ -537,76 +502,51 @@ function confirmInput() {
         return;
     }
 
-    if (inputMode === 'deposit') {
-        confirmDeposit(amount, 'そのた');
-    } else if (inputMode === 'withdraw') {
+    if (inputMode === 'deposit') confirmDeposit(amount, 'そのた');
+    else if (inputMode === 'withdraw') {
         userData.balance -= amount;
         addHistoryRecord('withdraw', amount, 'つかった');
         updateUI();
         closeModals();
     } else if (inputMode === 'adjust') {
         userData.balance = amount;
-        addHistoryRecord('adjust', amount, 'て入力でのしゅうせい');
+        addHistoryRecord('adjust', amount, 'て入力修正');
         updateUI();
         closeModals();
     }
 }
 
 function confirmDeposit(amount, reason) {
-    // 変更：残高ではなく「もらう予定」に加算
     userData.pendingAmount = (userData.pendingAmount || 0) + amount;
-
     soundManager.playCoin();
-
-    if (reason === '英語テスト合格') {
-        playSpecialEffect('🎉合格おめでとう！🎉');
-    } else {
-        if (currentUser === 'masamune') playSpecialEffect('出発進行！🚃');
-        else playSpecialEffect('レベルアップ！⭐');
-    }
-    saveAllData(); // 履歴は作らないが、pendingAmountを保存
+    playSpecialEffect(reason === '英語テスト合格' ? '🎉合格おめでとう！🎉' : (currentUser === 'masamune' ? '出発進行！🚃' : 'レベルアップ！⭐'));
+    saveAllData();
     updateUI();
     closeModals();
 }
 
 function claimPendingAmount() {
-    if (!userData.pendingAmount || userData.pendingAmount <= 0) {
-        alert('まだもらう予定のお金がないよ！');
-        return;
-    }
-
+    if (!userData.pendingAmount) return alert('まだお金がないよ！');
     const amount = userData.pendingAmount;
     userData.balance += amount;
     userData.pendingAmount = 0;
-
     addHistoryRecord('deposit', amount, 'お手伝いでもらった');
-
     playSpecialEffect('💰 お金をもらった！ 💰');
     updateUI();
 }
 
 function deleteHistoryItem(index) {
-    if (!confirm('この履歴を消してもいい？（お金も元にもどるよ）')) return;
-
+    if (!confirm('消してもいい？')) return;
     const item = userData.history[index];
-    if (item.type === 'deposit' || item.type === 'adjust') {
-        userData.balance -= item.amount;
-    } else if (item.type === 'withdraw') {
-        userData.balance += item.amount;
-    }
-
+    if (['deposit', 'adjust'].includes(item.type)) userData.balance -= item.amount;
+    else if (item.type === 'withdraw') userData.balance += item.amount;
     userData.history.splice(index, 1);
     saveAllData();
     updateUI();
 }
 
 function addHistoryRecord(type, amount, reason) {
-    userData.history.push({
-        type: type,
-        amount: amount,
-        reason: reason,
-        date: getTodayStr()
-    });
+    userData.history.push({ type, amount, reason, date: getTodayStr() });
     saveAllData();
 }
 
@@ -627,5 +567,4 @@ function playSpecialEffect(text) {
     setTimeout(() => overlay.remove(), 2000);
 }
 
-// 実行開始 (ここを以下に書き換えてください)
 window.addEventListener('DOMContentLoaded', init);
