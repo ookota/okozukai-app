@@ -177,12 +177,12 @@ function initEventListeners() {
     const clickEvents = {
         'btn-train': () => switchUser('masamune'),
         'btn-pokemon': () => switchUser('momoyo'),
-        'btn-deposit-menu': () => showPage('help-modal'),
+        'btn-deposit-menu': openHelpModal,
         'btn-withdraw': () => openNumpadModal('withdraw'),
         'btn-close-modal': closeModals,
         'btn-close-help': closeModals,
         'btn-help-other': () => openNumpadModal('deposit'),
-        'btn-settings-toggle': () => showPage('settings-modal'),
+        'btn-settings-toggle': openSettingsModal,
         'btn-save-settings': saveSettings,
         'btn-apply-balance': applyBalanceAdjustment,
         'btn-edit-balance': () => openNumpadModal('adjust'),
@@ -465,6 +465,58 @@ function openNumpadModal(mode) {
     modalTitle.textContent = titles[mode] || 'しゅうせい';
     showPage('numpad-modal');
     setTimeout(() => keyboardInput.focus(), 100);
+}
+
+/**
+ * お手伝いメニューを動的に生成して表示
+ */
+function openHelpModal() {
+    window.logToScreen('📋 お手伝いメニューを生成中...');
+    if (!helpOptionsContainer) return;
+
+    helpOptionsContainer.innerHTML = '';
+    userData.helpMaster.forEach(task => {
+        const btn = document.createElement('button');
+        btn.className = `help-opt-btn ${task.special ? 'special' : ''}`;
+        btn.innerHTML = `${task.icon} ${task.name}<br><small>${task.price}円</small>`;
+        btn.onclick = () => {
+            window.logToScreen(`👆 選択: ${task.name}`);
+            closeModals();
+            confirmDeposit(task.price, task.name);
+        };
+        helpOptionsContainer.appendChild(btn);
+    });
+    showPage('help-modal');
+}
+
+/**
+ * 設定メニュー（単価設定）を表示
+ * ※簡単なパスワード保護を追加
+ */
+function openSettingsModal() {
+    const pw = prompt('パスワードをいれてね（おうちの人用）');
+    if (pw !== '1234') { // デフォルトパスワード
+        alert('パスワードがちがうよ！');
+        return;
+    }
+
+    if (!adjustBalanceInput || !settingsListContainer) return;
+
+    adjustBalanceInput.value = userData.balance;
+    settingsListContainer.innerHTML = '';
+    userData.helpMaster.forEach(task => {
+        const div = document.createElement('div');
+        div.className = 'settings-item';
+        div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:5px;border-bottom:1px solid #eee;';
+        div.innerHTML = `
+            <span>${task.icon} ${task.name}</span>
+            <div>
+                <input type="number" value="${task.price}" data-id="${task.id}" style="width:60px;padding:5px;border-radius:5px;border:1px solid #ccc;"> 円
+            </div>
+        `;
+        settingsListContainer.appendChild(div);
+    });
+    showPage('settings-modal');
 }
 
 function applyBalanceAdjustment() {
