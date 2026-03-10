@@ -1,41 +1,10 @@
-// --- 調査用コード 開始 ---
-(function () {
-    const debugArea = document.createElement('div');
-    debugArea.id = 'debug-log-area';
-    debugArea.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;max-height:150px;overflow-y:auto;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;z-index:9999;padding:5px;pointer-events:none;border-top:1px solid #0f0;';
-    document.body.appendChild(debugArea);
-
-    window.logToScreen = function (msg) {
-        const line = document.createElement('div');
-        line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-        debugArea.appendChild(line);
-        debugArea.scrollTop = debugArea.scrollHeight;
-        console.log(msg);
-    };
-
-    window.onerror = function (msg, url, lineNo, columnNo, error) {
-        window.logToScreen(`❌ エラー発生: ${msg} (行:${lineNo} 列:${columnNo})`);
-        return false;
-    };
-
-    document.addEventListener('click', function (e) {
-        const btn = e.target.closest('button');
-        if (btn) {
-            window.logToScreen(`👆 クリックされました: ${btn.id || btn.className || 'ボタン'}`);
-        }
-    }, true);
-
-    window.logToScreen('🚀 調査用コード 読み込み完了');
-})();
-// --- 調査用コード 終了 ---
-
 // 状態管理
 let currentUser = localStorage.getItem('last_user') || 'masamune';
 
 // Google Apps Script の Web アプリ URL
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbjqvg3Oa7n10aFQQQ3bpNC5wkVO1ESwCfuf0Qlte9pu68_dD5lO-fILEhwUL2yN_Q9/exec';
 
-// 初期設定（ベース）
+// 初期設定（ベースとなる項目）
 const defaultHelpMaster = [
     { id: 'bath', name: '風呂洗い', price: 10, icon: '🛁' },
     { id: 'bed', name: '布団たたみ', price: 10, icon: '🛌' },
@@ -66,7 +35,9 @@ let userData = {
 
 // 音の管理
 class SoundManager {
-    constructor() { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+    constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
     playCoin() {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -75,8 +46,10 @@ class SoundManager {
         osc.frequency.exponentialRampToValueAtTime(1760, this.ctx.currentTime + 0.1);
         gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.3);
     }
     playFanfare() {
         const notes = [523.25, 659.25, 783.99, 1046.50];
@@ -86,8 +59,10 @@ class SoundManager {
             osc.frequency.setValueAtTime(freq, this.ctx.currentTime + i * 0.15);
             gain.gain.setValueAtTime(0.1, this.ctx.currentTime + i * 0.15);
             gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.15 + 0.4);
-            osc.connect(gain); gain.connect(this.ctx.destination);
-            osc.start(this.ctx.currentTime + i * 0.15); osc.stop(this.ctx.currentTime + i * 0.15 + 0.4);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(this.ctx.currentTime + i * 0.15);
+            osc.stop(this.ctx.currentTime + i * 0.15 + 0.4);
         });
     }
 }
@@ -123,29 +98,24 @@ const dailyPlanArea = document.getElementById('daily-plan');
  * 画面（モーダル）の切り替えを行う共通関数
  */
 function showPage(pageId) {
-    window.logToScreen(`📺 Page切り替え: ${pageId}`);
     const modals = [helpModal, numpadModal, settingsModal];
     modals.forEach(m => { if (m) m.classList.add('hidden'); });
     const target = document.getElementById(pageId);
     if (target) {
         target.classList.remove('hidden');
-        window.logToScreen(`✅ ${pageId} を表示しました`);
     }
 }
 
 async function init() {
-    window.logToScreen('⚙️ init() 開始');
     loadFromLocalStorage();
     applyTheme();
     updateUI();
     loadAllData();
-    setInterval(loadAllData, 30000);
+    setInterval(loadAllData, 30000); // 30秒ごとに自動同期
     initEventListeners();
-    window.logToScreen('✅ 初期化完了');
 }
 
 function initEventListeners() {
-    window.logToScreen('👂 イベントリスナー登録');
     const clickEvents = {
         'btn-train': () => switchUser('masamune'),
         'btn-pokemon': () => switchUser('momoyo'),
@@ -165,7 +135,7 @@ function initEventListeners() {
 
     for (const [id, handler] of Object.entries(clickEvents)) {
         const el = document.getElementById(id);
-        if (el) el.onclick = () => { window.logToScreen(`🖱️ Event: ${id}`); handler(); };
+        if (el) el.onclick = () => handler();
     }
 
     goalNameInput.oninput = (e) => { userData.goalName = e.target.value; saveAllData(); };
@@ -175,7 +145,6 @@ function initEventListeners() {
 }
 
 function loadFromLocalStorage() {
-    window.logToScreen('💾 LocalStorage読み込み');
     const saved = localStorage.getItem('all_users_data');
     if (saved) {
         try {
@@ -184,9 +153,8 @@ function loadFromLocalStorage() {
                 allUsersData.sharedHelpMaster = JSON.parse(JSON.stringify(defaultHelpMaster));
             }
             expandCurrentUserData();
-            window.logToScreen('💾 読み込み成功');
         } catch (e) {
-            window.logToScreen('❌ Parse error');
+            console.error('LocalStorage parse error');
         }
     }
 }
@@ -194,7 +162,6 @@ function loadFromLocalStorage() {
 async function loadAllData() {
     if (!GAS_URL || GAS_URL.includes('貼り付けてください')) return;
     try {
-        window.logToScreen('☁️ GAS同期中...');
         const response = await fetch(GAS_URL);
         if (!response.ok) throw new Error('Fetch failed');
         const data = await response.json();
@@ -206,10 +173,9 @@ async function loadAllData() {
             localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
             expandCurrentUserData();
             updateUI();
-            window.logToScreen('☁️ 同期成功');
         }
     } catch (e) {
-        window.logToScreen('⚠️ 同期なし（オフライン）');
+        // オフライン時はエラー表示せずサイレントに継続
     }
 }
 
@@ -232,15 +198,12 @@ async function saveAllData() {
     try {
         await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(allUsersData) });
         localStorage.removeItem('pending_sync');
-        window.logToScreen('☁️ 保存成功');
     } catch (e) {
-        window.logToScreen('⚠️ 保存失敗');
         localStorage.setItem('pending_sync', 'true');
     }
 }
 
 function openHelpModal() {
-    window.logToScreen('📋 メニュー生成');
     if (!helpOptionsContainer) return;
     helpOptionsContainer.innerHTML = '';
     allUsersData.sharedHelpMaster.forEach(task => {
@@ -286,14 +249,14 @@ function addNewHelpItem() {
     document.getElementById('new-item-name').value = '';
     document.getElementById('new-item-price').value = '';
     document.getElementById('new-item-icon').value = '';
-    openSettingsModal();
+    openSettingsModal(); // 再描画
 }
 
-/** 削除機能はグローバル関数としておく */
+/** 削除機能はグローバル関数として定義 */
 window.deleteHelpItem = function (id) {
-    if (!confirm('消してもいい？')) return;
+    if (!confirm('これを消してもいいですか？')) return;
     allUsersData.sharedHelpMaster = allUsersData.sharedHelpMaster.filter(t => t.id !== id);
-    openSettingsModal();
+    openSettingsModal(); // 再描画
 };
 
 function saveSettings() {
@@ -356,7 +319,7 @@ function claimPendingAmount() {
 }
 
 function deleteHistoryItem(index) {
-    if (!confirm('消してもいい？')) return;
+    if (!confirm('消してもいいですか？')) return;
     const item = userData.history[index];
     if (['deposit', 'adjust'].includes(item.type)) userData.balance -= item.amount;
     else if (item.type === 'withdraw') userData.balance += item.amount;
@@ -387,7 +350,6 @@ function playSpecialEffect(text) {
 
 function switchUser(user) {
     if (currentUser === user) return;
-    window.logToScreen(`👤 ユーザー切替: ${user}`);
     currentUser = user;
     loadAllData(); applyTheme(); updateUI();
 }
