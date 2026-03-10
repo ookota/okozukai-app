@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>まさもも おこづかい帳</title>
+    <link rel="icon" href="favicon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4ecdc4">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=M+PLUS+Rounded+1c:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="theme-train">
+    <div id="bg-layer" class="bg-layer"></div>
+    <!-- モード切り替えスイッチ -->
+    <div class="mode-switcher">
+        <div class="user-title" id="display-user-name">まさもも おこづかい帳</div>
+        <div class="theme-toggles">
+            <button id="btn-train" class="mode-btn active">🚃 マサムネ</button>
+            <button id="btn-pokemon" class="mode-btn">✨ モモヨ</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 目標設定エリア -->
+        <section id="goal-container" class="goal-container">
+            <div class="goal-header">
+                <span>🎯 目標：</span>
+                <input type="text" id="goal-name" placeholder="ほしいものをいれてね" class="goal-input-text">
+            </div>
+            <div class="goal-amount-setting">
+                <input type="number" id="goal-target-amount" placeholder="いくら？" class="goal-input-num"><span>円</span>
+            </div>
+            <div class="goal-date-setting">
+                <input type="date" id="goal-target-date" class="goal-input-date"> までに貯める！
+            </div>
+            <div id="goal-message" class="goal-message">
+                あと <span id="remaining-amount">0</span> 円で ゲット！
+            </div>
+            <div id="daily-plan" class="daily-plan">
+                1日 <span id="daily-amount">0</span> 円 貯めよう！
+            </div>
+        </section>
+
+        <!-- ヘッダー / 残高表示 -->
+        <header class="balance-container">
+            <div id="pending-container" class="pending-container">
+                <span class="pending-label">もらう予定：</span>
+                <span id="pending-amount">0</span><span class="unit-small">円</span>
+            </div>
+            <div class="balance-label">残高</div>
+            <div id="balance-display" class="balance-amount">
+                <span class="currency">¥</span><span id="total-amount">0</span>
+                <button id="btn-edit-balance" class="edit-btn">✏️</button>
+            </div>
+            <button id="btn-claim-money" class="claim-btn">💰 お金をもらった！</button>
+        </header>
+
+        <!-- プログレスバー / キャラクター -->
+        <div id="progress-area" class="progress-area">
+            <div id="progress-track" class="progress-track">
+                <div id="progress-character" class="progress-character">🚃</div>
+            </div>
+            <div class="progress-labels">
+                <span>0円</span>
+                <span id="goal-label-end">1,000円</span>
+            </div>
+        </div>
+
+        <!-- 履歴表示 -->
+        <div class="history-container">
+            <div class="history-header">履歴</div>
+            <ul id="history-list" class="history-list">
+                <!-- 履歴がここに追加される -->
+            </ul>
+        </div>
+
+        <!-- アクションボタン -->
+        <button id="btn-deposit-menu" class="action-btn deposit">
+            <span class="icon">🚀</span>
+            <span class="label">お手伝い<br>内容</span>
+        </button>
+        <button id="btn-withdraw" class="action-btn withdraw">
+            <span class="icon">🛑</span>
+            <span class="label">つかった<br>お金</span>
+        </button>
+
+        <!-- 設定ボタン -->
+        <button id="btn-settings-toggle" class="settings-toggle">⚙️ おうちの人へ（せってい）</button>
+
+    </div>
+
+    <!-- お手伝い選択モーダル -->
+    <div id="help-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>なにをしましたか？</h2>
+            </div>
+            <div id="help-options" class="help-options">
+                <!-- JSで動的に生成 -->
+            </div>
+            <button id="btn-help-other" class="help-opt-btn other">その他（手入力）</button>
+            <button id="btn-close-help" class="close-modal">× キャンセル</button>
+        </div>
+    </div>
+
+    <!-- 設定モーダル（単価設定） -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content settings-content">
+            <div class="modal-header">
+                <h2>おうちの人用（せってい）</h2>
+            </div>
+
+            <div class="settings-section">
+                <h3>💰 いま持っているお金のしゅうせい</h3>
+                <div class="balance-adjust">
+                    <input type="number" id="adjust-balance-input" placeholder="今の金額"> 円
+                    <button id="btn-apply-balance" class="num-btn confirm">なおす</button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>📝 お手伝いの金額</h3>
+                <div id="settings-list" class="settings-list">
+                    <!-- JSで生成 -->
+                </div>
+            </div>
+
+            <button id="btn-save-settings" class="num-btn confirm">保存してとじる</button>
+        </div>
+    </div>
+
+    <!-- 入力モーダル（金額） -->
+    <div id="numpad-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">はいったお金</h2>
+            </div>
+            <div class="input-container">
+                <input type="number" id="keyboard-input" class="keyboard-input" placeholder="0" inputmode="numeric">
+                <span class="unit">円</span>
+            </div>
+            <div class="modal-buttons">
+                <button id="btn-confirm" class="num-btn confirm">決定</button>
+                <button id="btn-close-modal" class="close-modal">× キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registered!'))
+                    .catch(err => console.log('Service Worker registration failed: ', err));
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,561 @@
+:root {
+    --bg-color: #f0f4f8;
+    --card-bg: #ffffff;
+    --text-color: #333333;
+    --accent-color: #007bff;
+    --radius: 20px;
+    --font-main: 'M PLUS Rounded 1c', sans-serif;
+    --font-digital: 'Kosugi Maru', sans-serif;
+    --shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* 電車モード (マサムネ) - 明るい色に変更 */
+body.theme-train {
+    --bg-color: #e3f2fd; /* 明るい空色 */
+    --card-bg: #ffffff;
+    --text-color: #2c3e50;
+    --header-bg: #bbdefb;
+    --accent-color: #1976d2; /* 鮮やかな青 */
+    --deposit-color: #4caf50; /* 元気な緑 */
+    --withdraw-color: #f44336; /* 元気な赤 */
+    --display-font: 'M PLUS Rounded 1c', sans-serif;
+    background-color: var(--bg-color);
+    background-image: url('train-masamune.png');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+}
+body.theme-train::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(227, 242, 253, 0.8);
+    z-index: -1;
+}
+
+body.theme-train .balance-amount {
+    background: #ffffff;
+    color: #1976d2;
+    font-family: var(--font-main);
+    border: 4px solid #1976d2;
+    padding: 10px 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(25, 118, 210, 0.2);
+}
+
+body.theme-train .user-title {
+    color: #1976d2;
+    text-shadow: 1px 1px 0px #ffffff, 3px 3px 0px rgba(25, 118, 210, 0.1);
+    background: #ffffff;
+    border: 3px solid #1976d2;
+}
+
+/* ポケモンモード (モモヨ) */
+body.theme-pokemon {
+    --bg-color: #fff5f8;
+    --card-bg: #ffffff;
+    --text-color: #444;
+    --header-bg: #ffe0e9;
+    --accent-color: #f06292;
+    --deposit-color: #ff5252;
+    --withdraw-color: #4fc3f7;
+    background-color: var(--bg-color);
+    background-image: url('chirutto.png');
+    background-size: 150px auto; /* 画像の大きさを調整 */
+    background-repeat: repeat;
+    background-attachment: fixed;
+    background-position: top left;
+}
+body.theme-pokemon::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 245, 248, 0.8);
+    z-index: -1;
+}
+
+body.theme-pokemon .balance-amount {
+    background: linear-gradient(135deg, #fff9c4, #f8bbd0);
+    color: #ec407a;
+    padding: 15px 30px;
+    border-radius: 40px;
+}
+
+/* 共通レスポンシブスタイル */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 10px;
+}
+
+.mode-switcher {
+    width: 100%;
+    max-width: 500px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.theme-toggles {
+    display: flex;
+    gap: 10px;
+}
+
+.mode-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    background: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.mode-btn.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+/* 背景レイヤー */
+.bg-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+    background-color: #fff; /* 背景色を白に固定して元のデザインを隠す */
+}
+
+.pla-tile {
+    display: block;
+    float: left;
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    opacity: 1;
+}
+
+.theme-pokemon .bg-layer {
+    display: none; /* ポケモンテーマ時はレイヤーごと消す */
+}
+
+.container {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+section, header, .progress-area, .history-container {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 15px;
+    box-shadow: var(--shadow);
+}
+
+/* 目標エリア */
+.goal-container {
+    border: 4px dashed var(--accent-color);
+    padding: 25px !important;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #fff, #f9f9f9);
+    transform: scale(1.02);
+}
+.goal-header {
+    font-size: 1.4rem;
+    margin-bottom: 10px;
+}
+.goal-input-text {
+    font-size: 1.4rem !important;
+    font-weight: bold;
+}
+.goal-amount-setting {
+    font-size: 1.6rem;
+    margin: 10px 0;
+}
+.goal-input-num {
+    font-size: 1.6rem !important;
+    width: 120px !important;
+}
+.goal-message {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    margin-top: 10px;
+}
+#remaining-amount {
+    font-size: 1.8rem;
+    color: #ff5252;
+}
+.goal-input-text, .goal-input-num {
+    border: none;
+    border-bottom: 1px solid #ccc;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 2px;
+}
+.goal-amount-setting {
+    font-size: 1.6rem;
+    margin: 5px 0;
+}
+.goal-date-setting {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+}
+.goal-input-date {
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-family: inherit;
+}
+.daily-plan {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    font-weight: bold;
+    color: #666;
+}
+#daily-amount {
+    font-size: 1.4rem;
+    color: #1976d2;
+}
+
+.balance-container { 
+    text-align: center; 
+    position: relative;
+}
+.balance-amount { 
+    font-size: 2.8rem; 
+    font-weight: bold; 
+    margin-top: 5px; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.edit-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+    opacity: 0.6;
+    transition: opacity 0.2s, transform 0.2s;
+}
+.edit-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.pending-container {
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #f39c12;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 5px 15px;
+    border-radius: 20px;
+    display: inline-block;
+    border: 2px dashed #f39c12;
+}
+.pending-label { font-size: 0.9rem; }
+#pending-amount { font-size: 1.4rem; }
+.unit-small { font-size: 0.8rem; margin-left: 2px; }
+
+.claim-btn {
+    margin-top: 15px;
+    background: #e67e22;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: bold;
+    box-shadow: 0 4px #d35400;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.claim-btn:active {
+    box-shadow: 0 2px #d35400;
+    transform: translateY(2px);
+}
+
+/* プログレスバー */
+.progress-track {
+    height: 10px;
+    background: #eeeeee;
+    border-radius: 5px;
+    margin: 30px 0 10px 0;
+    position: relative;
+}
+.progress-character {
+    position: absolute;
+    top: -28px;
+    left: 0%;
+    font-size: 1.8rem;
+    transition: left 0.5s ease;
+}
+.progress-labels { display: flex; justify-content: space-between; font-size: 0.75rem; }
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-size: 0.9rem;
+}
+.history-content { flex-grow: 1; display: flex; justify-content: space-between; align-items: center; }
+.btn-delete {
+    background: #eee;
+    color: #999;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    margin-left: 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+.btn-delete:hover {
+    background: #e74c3c;
+    color: white;
+}
+.history-item.plus { color: #28a745; }
+.history-item.minus { color: #dc3545; }
+
+/* ボタン */
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.action-btn {
+    height: 100px;
+    border: none;
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    color: white;
+}
+.action-btn.deposit { background-color: var(--deposit-color); }
+.action-btn.withdraw { background-color: var(--withdraw-color); }
+.action-btn .icon { font-size: 2rem; }
+.action-btn .label { font-weight: bold; font-size: 1.1rem; }
+
+.settings-toggle {
+    background: none;
+    border: none;
+    color: #888;
+    text-decoration: underline;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding-bottom: 20px;
+}
+
+/* モーダル */
+.modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+}
+.modal.hidden { display: none; }
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 400px;
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    color: #333;
+}
+
+/* テンキー */
+.keyboard-input {
+    width: 80%;
+    font-size: 2.5rem;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    text-align: right;
+    margin: 20px 0;
+    font-family: inherit;
+}
+.unit {
+    font-size: 1.5rem;
+    margin-left: 10px;
+}
+.modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+#btn-confirm {
+    width: 100%;
+    height: 60px;
+    font-weight: bold;
+    font-size: 1.4rem;
+}
+.close-modal {
+    background: #f5f5f5;
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #666;
+}
+
+/* お手伝い選択 */
+.help-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 15px 0;
+}
+.help-opt-btn {
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+/* 設定セクション */
+.settings-section { margin-bottom: 20px; text-align: left; }
+.balance-adjust { display: flex; gap: 5px; margin-top: 5px; }
+.balance-adjust input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 5px; }
+
+/* 特別演出 */
+.effect-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 3rem;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 10px gold;
+    pointer-events: none;
+    z-index: 200;
+}
+.animate-pop { animation: pop 1.5s ease-out forwards; }
+@keyframes pop {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+}
+.sparkle-bg { animation: flash 0.5s 4 alternate; }
+@keyframes flash { from { background: rgba(255,215,0,0); } to { background: rgba(255,215,0,0.3); } }
+
+/* ゴール達成時の演出 */
+.goal-reached {
+    animation: celebrate 0.5s ease-in-out infinite alternate;
+    border: 4px solid gold !important;
+    box-shadow: 0 0 20px gold !important;
+}
+@keyframes celebrate {
+    from { transform: scale(1.02); }
+    to { transform: scale(1.05); }
+}
+
+/* ネットワークデバイス表示 */
+.network-container {
+    margin-top: 20px;
+    padding: 10px;
+    border-top: 2px dashed #ccc;
+    text-align: center;
+}
+
+.scan-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.scan-btn:hover {
+    background: #5a6268;
+}
+
+.network-list-area {
+    margin-top: 15px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: left;
+}
+
+.network-hint {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.network-device-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.network-device-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    font-family: monospace;
+}
+
+.network-device-item:last-child {
+    border-bottom: none;
+}
+
+.device-ip {
+    font-weight: bold;
+    color: #444;
+}
+
+.hidden {
+    display: none;
+}

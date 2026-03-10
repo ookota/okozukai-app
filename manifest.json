@@ -1,0 +1,28 @@
+{
+  "name": "わくわくマネーたからばこ",
+  "short_name": "お小遣い帳",
+  "description": "家族で楽しく使えるお小遣い管理アプリ",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4ecdc4",
+  "icons": [
+    {
+      "src": "icon-family.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-train.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "label": "マサムネ駅"
+    },
+    {
+      "src": "icon-pokemon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "label": "モモヨのポケモンセンター"
+    }
+  ]
+}
