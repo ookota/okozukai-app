@@ -99,9 +99,12 @@ const dailyAmountDisplay = document.getElementById('daily-amount');
 const dailyPlanArea = document.getElementById('daily-plan');
 
 async function init() {
-    await loadAllData();
+    loadFromLocalStorage(); // まずローカルデータを読み込んでUIを反応させる
     applyTheme();
     updateUI();
+
+    // バックグラウンドでGASと同期（awaitしない）
+    loadAllData();
 
     // 定期的な同期（30秒ごと）
     setInterval(loadAllData, 30000);
@@ -148,75 +151,75 @@ async function init() {
     document.getElementById('btn-claim-money').addEventListener('click', claimPendingAmount);
 }
 
-// サーバーまたはLocalStorageから全データを読み込む
-async function loadAllData() {
-    // file:// プロトコル（サーバーなしで直接開いた場合）は、サーバー通信をスキップ
-    if (window.location.protocol === 'file:') {
-        console.warn('Running in file mode. Using LocalStorage.');
-        const saved = localStorage.getItem('all_users_data');
-        if (saved) {
+// LocalStorageからデータを読み込む（高速・確実）
+function loadFromLocalStorage() {
+    const saved = localStorage.getItem('all_users_data');
+    if (saved) {
+        try {
             allUsersData = JSON.parse(saved);
-        }
-    } else if (GAS_URL && GAS_URL !== 'https://script.google.com/macros/s/AKfycbwQkLBkAR7-xtxrqBedmHY8WYZuoee92WF7i9kA18wL7qnOhEiovcF757OYOL9ruIK1/exec') {
-        try {
-            // GASからの読み込みを試行
-            const response = await fetch(GAS_URL);
-            if (response.ok) {
-                allUsersData = await response.json();
-                localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
-                console.log('Loaded from Google Sheets');
-            } else {
-                throw new Error('GAS error');
-            }
+            expandCurrentUserData();
         } catch (e) {
-            console.warn('GAS offline or error, using LocalStorage', e);
-            const saved = localStorage.getItem('all_users_data');
-            if (saved) {
-                allUsersData = JSON.parse(saved);
-            }
+            console.error('LocalStorage parse error', e);
         }
-    } else if (GAS_URL === 'https://script.google.com/macros/s/AKfycbwQkLBkAR7-xtxrqBedmHY8WYZuoee92WF7i9kA18wL7qnOhEiovcF757OYOL9ruIK1/exec') {
-        // すでにURLが設定されている場合の読み込み
-        try {
-            const response = await fetch(GAS_URL);
-            if (response.ok) {
-                allUsersData = await response.json();
-                localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
-            }
-        } catch (e) {
-            console.warn('GAS fetch error', e);
-            const saved = localStorage.getItem('all_users_data');
-            if (saved) allUsersData = JSON.parse(saved);
-        }
-    } else {
-        const saved = localStorage.getItem('all_users_data');
-        if (saved) allUsersData = JSON.parse(saved);
+    }
+}
+
+// サーバーまたはGASから全データを読み込む（非同期）
+async function loadAllData() {
+    const placeholder = 'ここにコピーしたURLを貼り付けてください';
+    if (!GAS_URL || GAS_URL === placeholder) {
+        console.warn('GAS_URL is not set.');
+        return;
     }
 
-    // 現在のユーザーのデータを展開
+    try {
+        console.log('Fetching from GAS...');
+        // タイムアウト付きのフェッチ（10秒）
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch(GAS_URL, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+            const freshData = await response.json();
+            if (freshData && Object.keys(freshData).length > 0) {
+                allUsersData = freshData;
+                localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
+                console.log('Loaded from Google Sheets');
+                expandCurrentUserData();
+                updateUI();
+            }
+        } else {
+            throw new Error(`GAS returned ${response.status}`);
+        }
+    } catch (e) {
+        console.warn('Sync from GAS failed:', e.name === 'AbortError' ? 'Timeout' : e.message);
+    }
+}
+
+// 現在のユーザーのデータを変数に展開する
+function expandCurrentUserData() {
     const userKey = `user_data_${currentUser}`;
     if (allUsersData[userKey]) {
         userData = allUsersData[userKey];
-        // お手伝いマスタの強制同期：最新の定義（風呂洗い等）を必ず含める
+        // お手伝いマスタの強制同期
         if (!userData.helpMaster) userData.helpMaster = [];
         defaultHelpMaster.forEach(defItem => {
             const existing = userData.helpMaster.find(t => t.id === defItem.id);
             if (existing) {
-                // 名前・単価・アイコンを最新の定義に強制上書き
                 existing.name = defItem.name;
                 existing.price = defItem.price;
                 existing.icon = defItem.icon;
             } else {
-                // 新規項目を追加
                 userData.helpMaster.push(JSON.parse(JSON.stringify(defItem)));
             }
         });
-        // 定義にない古い項目を削除（必要に応じて）
         userData.helpMaster = userData.helpMaster.filter(item =>
             defaultHelpMaster.some(def => def.id === item.id)
         );
     } else {
-        // ユーザーデータがない場合の初期化
+        // 初期化
         userData = {
             balance: 0,
             history: [],
@@ -228,7 +231,6 @@ async function loadAllData() {
             pendingAmount: 0
         };
     }
-    updateUI();
 }
 
 // サーバーとLocalStorageに全データを保存する
@@ -236,28 +238,27 @@ async function saveAllData() {
     const userKey = `user_data_${currentUser}`;
     allUsersData[userKey] = userData;
 
-    // LocalStorageにまず保存
+    // LocalStorageにまず保存（即時）
     localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
     localStorage.setItem('last_user', currentUser);
 
-    // file:// プロトコル または 一般的な静的ホスト
-    const skipSync = (!GAS_URL || GAS_URL === 'ここにコピーしたURLを貼り付けてください');
-    if (skipSync) return;
+    const placeholder = 'ここにコピーしたURLを貼り付けてください';
+    if (!GAS_URL || GAS_URL === placeholder) return;
 
     try {
+        console.log('Syncing to Google Sheets...');
         // GASへの送信（POST）
-        const response = await fetch(GAS_URL, {
+        await fetch(GAS_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            mode: 'no-cors', // 重要：CORSエラー回避
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(allUsersData)
         });
 
-        // mode: 'no-cors' の場合 response.ok は false になるが送信は成功している
         localStorage.removeItem('pending_sync');
         console.log('Synced successfully to Google Sheets');
     } catch (e) {
-        console.warn('Could not sync to Google Sheets, saving for later', e);
+        console.warn('Sync to Google Sheets failed:', e);
         localStorage.setItem('pending_sync', 'true');
     }
 }
