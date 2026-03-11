@@ -148,13 +148,19 @@ function loadFromLocalStorage() {
     const saved = localStorage.getItem('all_users_data');
     if (saved) {
         try {
-            allUsersData = JSON.parse(saved);
+            const parsed = JSON.parse(saved);
+            if (parsed && typeof parsed === 'object') {
+                allUsersData = parsed;
+            }
             if (!allUsersData.sharedHelpMaster) {
                 allUsersData.sharedHelpMaster = JSON.parse(JSON.stringify(defaultHelpMaster));
             }
             expandCurrentUserData();
         } catch (e) {
-            console.error('LocalStorage parse error');
+            console.error('LocalStorage parse error', e);
+            // 壊れている場合は初期化
+            allUsersData = { sharedHelpMaster: JSON.parse(JSON.stringify(defaultHelpMaster)) };
+            expandCurrentUserData();
         }
     }
 }
@@ -181,10 +187,25 @@ async function loadAllData() {
 
 function expandCurrentUserData() {
     const userKey = `user_data_${currentUser}`;
+    const defaultData = {
+        balance: 0,
+        history: [],
+        goalName: '',
+        goalAmount: 1000,
+        goalDate: '',
+        goalReached: false,
+        pendingAmount: 0
+    };
+
     if (allUsersData[userKey]) {
-        userData = allUsersData[userKey];
+        // 保存されているデータとデフォルト値をマージして、プロパティの欠落を防ぐ
+        userData = Object.assign({}, defaultData, allUsersData[userKey]);
+        // historyが壊れている場合の保護
+        if (!Array.isArray(userData.history)) {
+            userData.history = [];
+        }
     } else {
-        userData = { balance: 0, history: [], goalName: '', goalAmount: 1000, goalDate: '', goalReached: false, pendingAmount: 0 };
+        userData = defaultData;
     }
 }
 
@@ -355,29 +376,34 @@ function switchUser(user) {
 }
 
 function applyTheme() {
-    const theme = currentUser === 'masamune' ? 'train' : 'pokemon';
-    body.className = `theme-${theme}`;
-    document.getElementById('btn-train').classList.toggle('active', currentUser === 'masamune');
-    document.getElementById('btn-pokemon').classList.toggle('active', currentUser === 'momoyo');
-    const depositBtn = document.getElementById('btn-deposit-menu');
-    const withdrawBtn = document.getElementById('btn-withdraw');
-    if (currentUser === 'masamune') {
-        displayUserName.textContent = 'マサムネ駅';
-        depositBtn.querySelector('.icon').textContent = '📗';
-        depositBtn.querySelector('.label').innerHTML = 'お手伝い<br>内容';
-        withdrawBtn.querySelector('.icon').textContent = '📕';
-        withdrawBtn.querySelector('.label').innerHTML = 'つかった<br>お金';
-    } else {
-        displayUserName.textContent = 'モモヨのポケモンセンター';
-        depositBtn.querySelector('.icon').textContent = '🔴';
-        depositBtn.querySelector('.label').innerHTML = 'お手伝い<br>内容';
-        withdrawBtn.querySelector('.icon').textContent = '💊';
-        withdrawBtn.querySelector('.label').innerHTML = 'つかった<br>お金';
+    try {
+        const theme = currentUser === 'masamune' ? 'train' : 'pokemon';
+        body.className = `theme-${theme}`;
+        document.getElementById('btn-train').classList.toggle('active', currentUser === 'masamune');
+        document.getElementById('btn-pokemon').classList.toggle('active', currentUser === 'momoyo');
+        const depositBtn = document.getElementById('btn-deposit-menu');
+        const withdrawBtn = document.getElementById('btn-withdraw');
+        if (currentUser === 'masamune') {
+            displayUserName.textContent = 'マサムネ駅';
+            depositBtn.querySelector('.icon').textContent = '📗';
+            depositBtn.querySelector('.label').innerHTML = 'お手伝い<br>内容';
+            withdrawBtn.querySelector('.icon').textContent = '📕';
+            withdrawBtn.querySelector('.label').innerHTML = 'つかった<br>お金';
+        } else {
+            displayUserName.textContent = 'モモヨのポケモンセンター';
+            depositBtn.querySelector('.icon').textContent = '🔴';
+            depositBtn.querySelector('.label').innerHTML = 'お手伝い<br>内容';
+            withdrawBtn.querySelector('.icon').textContent = '薬'; // '薬' label if icon missing
+            withdrawBtn.querySelector('.icon').textContent = '💊';
+            withdrawBtn.querySelector('.label').innerHTML = 'つかった<br>お金';
+        }
+        goalNameInput.value = userData.goalName || '';
+        goalAmountInput.value = userData.goalAmount || 1000;
+        goalDateInput.value = userData.goalDate || '';
+        updateBackground();
+    } catch (e) {
+        console.error('Apply theme error', e);
     }
-    goalNameInput.value = userData.goalName;
-    goalAmountInput.value = userData.goalAmount;
-    goalDateInput.value = userData.goalDate || '';
-    updateBackground();
 }
 
 function updateBackground() {
@@ -398,29 +424,34 @@ function updateBackground() {
 }
 
 function updateUI() {
-    const balance = Number(userData.balance) || 0;
-    const goalAmount = Number(userData.goalAmount) || 1000;
-    const pending = Number(userData.pendingAmount) || 0;
-    balanceAmount.textContent = balance.toLocaleString();
-    remainingDisplay.textContent = Math.max(0, goalAmount - balance).toLocaleString();
-    goalLabelEnd.textContent = goalAmount.toLocaleString() + '円';
-    const pendingEl = document.getElementById('pending-amount');
-    if (pendingEl) pendingEl.textContent = pending.toLocaleString();
-    historyList.innerHTML = '';
-    userData.history.slice(-10).reverse().forEach((item, index) => {
-        const actualIndex = userData.history.length - 1 - index;
-        const li = document.createElement('li');
-        li.className = `history-item ${item.type === 'withdraw' ? 'minus' : 'plus'}`;
-        li.innerHTML = `
-            <div class="history-content">
-                <span>${item.date} ${item.reason || ''}</span>
-                <span>${item.type === 'withdraw' ? '-' : '+'}${item.amount.toLocaleString()}円</span>
-            </div>
-            <button class="btn-delete" onclick="deleteHistoryItem(${actualIndex})">×</button>
-        `;
-        historyList.appendChild(li);
-    });
-    calculateDailyPlan(); updateProgress(); checkGoalReached();
+    try {
+        const balance = Number(userData.balance) || 0;
+        const goalAmount = Number(userData.goalAmount) || 1000;
+        const pending = Number(userData.pendingAmount) || 0;
+        balanceAmount.textContent = balance.toLocaleString();
+        remainingDisplay.textContent = Math.max(0, goalAmount - balance).toLocaleString();
+        goalLabelEnd.textContent = goalAmount.toLocaleString() + '円';
+        const pendingEl = document.getElementById('pending-amount');
+        if (pendingEl) pendingEl.textContent = pending.toLocaleString();
+        historyList.innerHTML = '';
+        const history = Array.isArray(userData.history) ? userData.history : [];
+        history.slice(-10).reverse().forEach((item, index) => {
+            const actualIndex = history.length - 1 - index;
+            const li = document.createElement('li');
+            li.className = `history-item ${item.type === 'withdraw' ? 'minus' : 'plus'}`;
+            li.innerHTML = `
+                <div class="history-content">
+                    <span>${item.date || ''} ${item.reason || ''}</span>
+                    <span>${item.type === 'withdraw' ? '-' : '+'}${(item.amount || 0).toLocaleString()}円</span>
+                </div>
+                <button class="btn-delete" onclick="deleteHistoryItem(${actualIndex})">×</button>
+            `;
+            historyList.appendChild(li);
+        });
+        calculateDailyPlan(); updateProgress(); checkGoalReached();
+    } catch (e) {
+        console.error('UI update error', e);
+    }
 }
 
 function calculateDailyPlan() {
