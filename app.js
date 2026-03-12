@@ -3,7 +3,7 @@ let currentUser = localStorage.getItem('last_user') || 'masamune';
 let isSyncedWithGAS = false; // GASとの初回同期が完了したか
 
 // Google Apps Script の Web アプリ URL
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbjqvg3Oa7n10aFQQQ3bpNC5wkVO1ESwCfuf0Qlte9pu68_dD5lO-fILEhwUL2yN_Q9/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycby0DrjL0h0pcXNPh9xsEOHOEvy5zEgiy6shc2ZjFCaClU29B0v7PCSBW5lxm5y6KrU/exec';
 
 // 初期設定（ベースとなる項目）
 const defaultHelpMaster = [
@@ -115,7 +115,7 @@ async function init() {
 
     // 次にGASから最新データを取得（これが「本物」のデータ）
     await loadAllData();
-    
+
     // 同期完了フラグを立てる（これ以降 saveAllData がGASに書き込めるようになる）
     isSyncedWithGAS = true;
 
