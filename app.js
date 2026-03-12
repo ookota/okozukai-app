@@ -176,9 +176,14 @@ function loadFromLocalStorage() {
 async function loadAllData() {
     if (!GAS_URL || GAS_URL.includes('貼り付けてください')) return;
     try {
+        console.log('Starting GAS fetch from:', GAS_URL);
         const response = await fetch(GAS_URL);
-        if (!response.ok) throw new Error('Fetch failed');
+        if (!response.ok) {
+            alert('GAS読み込み失敗: ' + response.status + ' ' + response.statusText);
+            throw new Error('Fetch failed');
+        }
         const data = await response.json();
+        console.log('GAS data received:', data);
         if (data && Object.keys(data).length > 0) {
             // GASからデータが取得できたら、それを最優先する
             allUsersData = data;
@@ -191,6 +196,13 @@ async function loadAllData() {
         }
     } catch (e) {
         console.warn('Sync failed (offline?):', e);
+        // デバッグ用一時コード
+        if (e.message.includes('Failed to fetch')) {
+            alert('GAS通信エラー（CORSまたはURL間違い）が発生しました。\nURL: ' + GAS_URL + '\nエラー内容: ' + e.message);
+        } else {
+            alert('GASデータ取得中にエラーが発生しました: ' + e.message);
+        }
+
         // 初回ロード時でGASに繋がらなかった場合は、LocalStorageの値をそのまま使う
         if (!isSyncedWithGAS) {
             loadFromLocalStorage();
@@ -238,9 +250,19 @@ async function saveAllData() {
 
     if (!GAS_URL || GAS_URL.includes('貼り付けてください')) return;
     try {
-        await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(allUsersData) });
+        console.log('Sending data to GAS...');
+        const response = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify(allUsersData),
+            mode: 'no-cors' // GASのPOSTはレスポンスが不透明なためno-corsが必要な場合がある
+        });
+        // no-cors の場合、response.ok は常に false (status 0) になるため、
+        // 成功したかどうかはスプレッドシート側で確認する必要があります。
+        console.log('GAS POST attempted', response);
         localStorage.removeItem('pending_sync');
     } catch (e) {
+        console.error('GAS POST failed:', e);
+        alert('GASへの送信に失敗しました: ' + e.message);
         localStorage.setItem('pending_sync', 'true');
     }
 }
