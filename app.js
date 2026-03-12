@@ -1,5 +1,6 @@
 // 状態管理
 let currentUser = localStorage.getItem('last_user') || 'masamune';
+let isSyncedWithGAS = false; // GASとの初回同期が完了したか
 
 // Google Apps Script の Web アプリ URL
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbjqvg3Oa7n10aFQQQ3bpNC5wkVO1ESwCfuf0Qlte9pu68_dD5lO-fILEhwUL2yN_Q9/exec';
@@ -107,10 +108,17 @@ function showPage(pageId) {
 }
 
 async function init() {
+    // まずローカルデータを「仮」で読み込み、すぐに画面を出す（体感速度のため）
     loadFromLocalStorage();
     applyTheme();
     updateUI();
-    loadAllData();
+
+    // 次にGASから最新データを取得（これが「本物」のデータ）
+    await loadAllData();
+    
+    // 同期完了フラグを立てる（これ以降 saveAllData がGASに書き込めるようになる）
+    isSyncedWithGAS = true;
+
     setInterval(loadAllData, 30000); // 30秒ごとに自動同期
     initEventListeners();
 }
@@ -172,6 +180,7 @@ async function loadAllData() {
         if (!response.ok) throw new Error('Fetch failed');
         const data = await response.json();
         if (data && Object.keys(data).length > 0) {
+            // GASからデータが取得できたら、それを最優先する
             allUsersData = data;
             if (!allUsersData.sharedHelpMaster) {
                 allUsersData.sharedHelpMaster = JSON.parse(JSON.stringify(defaultHelpMaster));
@@ -181,7 +190,12 @@ async function loadAllData() {
             updateUI();
         }
     } catch (e) {
-        // オフライン時はエラー表示せずサイレントに継続
+        console.warn('Sync failed (offline?):', e);
+        // 初回ロード時でGASに繋がらなかった場合は、LocalStorageの値をそのまま使う
+        if (!isSyncedWithGAS) {
+            loadFromLocalStorage();
+            updateUI();
+        }
     }
 }
 
@@ -214,6 +228,13 @@ async function saveAllData() {
     allUsersData[userKey] = userData;
     localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
     localStorage.setItem('last_user', currentUser);
+
+    // まだ一度もGASと同期できていない（＝古いローカルデータかもしれない）場合は、
+    // GAS側を上書きしないように送信をブロックする
+    if (!isSyncedWithGAS) {
+        console.log('Skipping sync to GAS: initial sync not complete.');
+        return;
+    }
 
     if (!GAS_URL || GAS_URL.includes('貼り付けてください')) return;
     try {
