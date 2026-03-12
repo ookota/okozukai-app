@@ -302,6 +302,27 @@ function applyBalanceAdjustment() {
     }
 }
 
+function openNumpadModal(mode) {
+    inputMode = mode;
+    currentInputValue = 0;
+    keyboardInput.value = '';
+
+    if (mode === 'deposit') {
+        modalTitle.textContent = 'はいったお金';
+    } else if (mode === 'withdraw') {
+        modalTitle.textContent = 'つかったお金';
+    } else if (mode === 'adjust') {
+        modalTitle.textContent = 'のこりの お金をしゅうせい';
+        keyboardInput.value = userData.balance;
+    }
+
+    showPage('numpad-modal');
+    setTimeout(() => {
+        keyboardInput.focus();
+        keyboardInput.select();
+    }, 100);
+}
+
 function closeModals() {
     [helpModal, numpadModal, settingsModal].forEach(m => { if (m) m.classList.add('hidden'); });
 }
