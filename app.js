@@ -416,10 +416,24 @@ function playSpecialEffect(text) {
     setTimeout(() => overlay.remove(), 2000);
 }
 
-function switchUser(user) {
+async function switchUser(user) {
     if (currentUser === user) return;
+    
+    // 現在のデータを保存（任意だが安全のため）
+    await saveAllData();
+    
     currentUser = user;
-    loadAllData(); applyTheme(); updateUI();
+    localStorage.setItem('last_user', currentUser);
+    
+    // 【重要】ユーザーを切り替えたら即座にそのユーザーのデータをローカルから読み込む
+    // これをしないと、前のユーザーのデータが残ったまま次のユーザーとして保存されてしまう
+    expandCurrentUserData();
+    
+    applyTheme();
+    updateUI();
+    
+    // その後、バックグラウンドでGASから最新データを取得
+    loadAllData();
 }
 
 function applyTheme() {
