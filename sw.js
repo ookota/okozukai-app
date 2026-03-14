@@ -35,9 +35,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Network First strategy
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+    fetch(event.request).catch(() => {
+      // オフライン時はキャッシュから返す（クエリパラメータを無視）
+      return caches.match(event.request, { ignoreSearch: true });
     })
   );
 });

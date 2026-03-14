@@ -16,7 +16,7 @@ const defaultHelpMaster = [
     { id: 'socks', name: '靴下洗い', price: 10, icon: '🧦' },
     { id: 'garbage', name: 'ごみ捨て', price: 10, icon: '🗑️' },
     { id: 'cooking', name: 'ご飯作り', price: 10, icon: '🍳' },
-    { id: 'english', name: '英語テスト合格', price: 500, icon: '🏫', special: true }
+    { id: 'english', name: '英語テスト合格', price: 50, icon: '🏫', special: true }
 ];
 
 // 全ユーザーおよび家族共通データの管理
@@ -133,6 +133,7 @@ function initEventListeners() {
         'btn-close-help': closeModals,
         'btn-help-other': () => openNumpadModal('deposit'),
         'btn-settings-toggle': openSettingsModal,
+        'btn-close-settings-x': closeModals,
         'btn-save-settings': saveSettings,
         'btn-apply-balance': applyBalanceAdjustment,
         'btn-edit-balance': () => openNumpadModal('adjust'),
@@ -146,10 +147,10 @@ function initEventListeners() {
         if (el) el.onclick = () => handler();
     }
 
-    goalNameInput.oninput = (e) => { userData.goalName = e.target.value; saveAllData(); };
-    goalAmountInput.oninput = (e) => { userData.goalAmount = parseInt(e.target.value) || 0; saveAllData(); updateUI(); };
-    goalDateInput.oninput = (e) => { userData.goalDate = e.target.value; saveAllData(); updateUI(); };
-    keyboardInput.onkeypress = (e) => { if (e.key === 'Enter') confirmInput(); };
+    goalNameInput.addEventListener('input', (e) => { userData.goalName = e.target.value; saveAllData(); });
+    goalAmountInput.addEventListener('input', (e) => { userData.goalAmount = parseInt(e.target.value) || 0; saveAllData(); updateUI(); });
+    goalDateInput.addEventListener('change', (e) => { userData.goalDate = e.target.value; saveAllData(); updateUI(); });
+    keyboardInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') confirmInput(); });
 }
 
 function loadFromLocalStorage() {
@@ -180,10 +181,11 @@ async function loadAllData() {
         if (!response.ok) throw new Error('Fetch failed');
         const data = await response.json();
         if (data && Object.keys(data).length > 0) {
-            // GASからデータが取得できたら、それを最優先する
+            // GASからデータが取得できたら、それを最優先するが、sharedHelpMaster の欠落を防ぐ
+            const localSharedHelp = allUsersData.sharedHelpMaster;
             allUsersData = data;
             if (!allUsersData.sharedHelpMaster) {
-                allUsersData.sharedHelpMaster = JSON.parse(JSON.stringify(defaultHelpMaster));
+                allUsersData.sharedHelpMaster = localSharedHelp || JSON.parse(JSON.stringify(defaultHelpMaster));
             }
             localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
             expandCurrentUserData();
@@ -273,7 +275,6 @@ function openSettingsModal() {
     allUsersData.sharedHelpMaster.forEach(task => {
         const div = document.createElement('div');
         div.className = 'settings-item';
-        div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:5px;border-bottom:1px solid #eee;';
         div.innerHTML = `
             <span>${task.icon} ${task.name}</span>
             <div>
@@ -458,9 +459,6 @@ function applyTheme() {
             withdrawBtn.querySelector('.icon').textContent = '💊';
             withdrawBtn.querySelector('.label').innerHTML = 'つかった<br>お金';
         }
-        goalNameInput.value = userData.goalName || '';
-        goalAmountInput.value = userData.goalAmount || 1000;
-        goalDateInput.value = userData.goalDate || '';
         updateBackground();
     } catch (e) {
         console.error('Apply theme error', e);
@@ -482,6 +480,12 @@ function updateBackground() {
         img.className = 'pla-tile';
         bgLayer.appendChild(img);
     }
+}
+
+function updateGoalInputs() {
+    if (document.activeElement !== goalNameInput) goalNameInput.value = userData.goalName || '';
+    if (document.activeElement !== goalAmountInput) goalAmountInput.value = userData.goalAmount || 1000;
+    if (document.activeElement !== goalDateInput) goalDateInput.value = userData.goalDate || '';
 }
 
 function updateUI() {
@@ -509,6 +513,7 @@ function updateUI() {
             `;
             historyList.appendChild(li);
         });
+        updateGoalInputs();
         calculateDailyPlan(); updateProgress(); checkGoalReached();
     } catch (e) {
         console.error('UI update error', e);

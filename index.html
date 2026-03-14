@@ -112,8 +112,9 @@
     <!-- 設定モーダル（単価設定） -->
     <div id="settings-modal" class="modal hidden">
         <div class="modal-content settings-content">
-            <div class="modal-header">
+            <div class="modal-header header-with-close">
                 <h2>おうちの人用（せってい）</h2>
+                <button id="btn-close-settings-x" class="close-btn-top">×</button>
             </div>
 
             <div class="settings-section">
@@ -162,7 +163,9 @@
         </div>
     </div>
 
-    <script src="app.js?v=1.0.3"></script>
+    <script>
+        document.write('<script src="app.js?v=' + new Date().getTime() + '"><\\/script>');
+    </script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
