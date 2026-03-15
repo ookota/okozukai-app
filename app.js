@@ -149,8 +149,17 @@ function initEventListeners() {
 
     goalNameInput.addEventListener('input', (e) => { userData.goalName = e.target.value; saveAllData(); });
     goalAmountInput.addEventListener('input', (e) => { userData.goalAmount = parseInt(e.target.value) || 0; saveAllData(); updateUI(); });
-    goalDateInput.addEventListener('change', (e) => { userData.goalDate = e.target.value; saveAllData(); updateUI(); });
+    const saveDateEvent = (e) => { userData.goalDate = e.target.value; saveAllData(); updateUI(); };
+    goalDateInput.addEventListener('input', saveDateEvent);
+    goalDateInput.addEventListener('change', saveDateEvent);
     keyboardInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') confirmInput(); });
+}
+
+function enforceEnglishPrice() {
+    if (allUsersData && allUsersData.sharedHelpMaster) {
+        const eng = allUsersData.sharedHelpMaster.find(t => t.id === 'english');
+        if (eng) eng.price = 50;
+    }
 }
 
 function loadFromLocalStorage() {
@@ -164,6 +173,7 @@ function loadFromLocalStorage() {
             if (!allUsersData.sharedHelpMaster) {
                 allUsersData.sharedHelpMaster = JSON.parse(JSON.stringify(defaultHelpMaster));
             }
+            enforceEnglishPrice();
             expandCurrentUserData();
         } catch (e) {
             console.error('LocalStorage parse error', e);
@@ -187,6 +197,7 @@ async function loadAllData() {
             if (!allUsersData.sharedHelpMaster) {
                 allUsersData.sharedHelpMaster = localSharedHelp || JSON.parse(JSON.stringify(defaultHelpMaster));
             }
+            enforceEnglishPrice();
             localStorage.setItem('all_users_data', JSON.stringify(allUsersData));
             expandCurrentUserData();
             updateUI();
@@ -266,8 +277,6 @@ function openHelpModal() {
 }
 
 function openSettingsModal() {
-    const pw = prompt('パスワード（共通：1234）');
-    if (pw !== '1234') return alert('パスワードがちがうよ！');
     if (!adjustBalanceInput || !settingsListContainer) return;
 
     adjustBalanceInput.value = userData.balance;

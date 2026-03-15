@@ -376,13 +376,23 @@ section, header, .progress-area, .history-container {
 .action-btn .label { font-weight: bold; font-size: 1.1rem; }
 
 .settings-toggle {
-    background: none;
-    border: none;
-    color: #888;
-    text-decoration: underline;
-    font-size: 0.8rem;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: bold;
     cursor: pointer;
-    padding-bottom: 20px;
+    padding: 12px 24px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    text-decoration: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.settings-toggle:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.1);
 }
 
 /* モーダル */
