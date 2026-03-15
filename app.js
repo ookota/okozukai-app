@@ -495,18 +495,32 @@ function updateGoalInputs() {
     if (document.activeElement !== goalNameInput) goalNameInput.value = userData.goalName || '';
     if (document.activeElement !== goalAmountInput) goalAmountInput.value = userData.goalAmount || 1000;
     
-    // 目標日の表示維持とUI反映の徹底
-    if (goalDateInput) {
-        let savedDate = userData.goalDate || '';
-        // もし yyyy/mm/dd 等の形式で保存されていた場合は yyyy-MM-DD に強制変換
-        if (savedDate && savedDate.includes('/')) {
-            const parts = savedDate.split('/');
-            if (parts.length === 3) {
-                savedDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-            }
+    let savedDate = userData.goalDate || '';
+    // YYYY/MM/DD などを YYYY-MM-DD に統一
+    if (savedDate && savedDate.includes('/')) {
+        const parts = savedDate.split('/');
+        if (parts.length === 3) {
+            savedDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
         }
-        
-        // フォーカス中であっても、現在空なら上書きする（表示消え対策）
+    }
+
+    // 表示用テキストの更新
+    const displayEl = document.getElementById('goal-date-display');
+    if (displayEl) {
+        if (savedDate) {
+            const parts = savedDate.split('-');
+            if (parts.length === 3) {
+                displayEl.textContent = `${parts[0]}年${parseInt(parts[1], 10)}月${parseInt(parts[2], 10)}日`;
+            } else {
+                displayEl.textContent = savedDate;
+            }
+        } else {
+            displayEl.textContent = '日付を選択してください';
+        }
+    }
+    
+    // 入力用input要素の更新
+    if (goalDateInput) {
         if (document.activeElement !== goalDateInput || !goalDateInput.value) {
             goalDateInput.value = savedDate;
         }

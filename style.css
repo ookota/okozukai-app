@@ -224,8 +224,25 @@ section, header, .progress-area, .history-container {
     margin: 5px 0;
 }
 .goal-date-setting {
-    font-size: 1.1rem;
     margin-bottom: 10px;
+}
+.goal-date-display {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    margin-bottom: 8px;
+    display: inline-block;
+    background: #fff;
+    padding: 5px 15px;
+    border-radius: 8px;
+    border: 2px solid var(--accent-color);
+}
+.goal-date-input-wrap {
+    font-size: 1rem;
+    color: #555;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .goal-input-date {
     padding: 5px;
