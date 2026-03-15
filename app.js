@@ -494,7 +494,23 @@ function updateBackground() {
 function updateGoalInputs() {
     if (document.activeElement !== goalNameInput) goalNameInput.value = userData.goalName || '';
     if (document.activeElement !== goalAmountInput) goalAmountInput.value = userData.goalAmount || 1000;
-    if (document.activeElement !== goalDateInput) goalDateInput.value = userData.goalDate || '';
+    
+    // 目標日の表示維持とUI反映の徹底
+    if (goalDateInput) {
+        let savedDate = userData.goalDate || '';
+        // もし yyyy/mm/dd 等の形式で保存されていた場合は yyyy-MM-DD に強制変換
+        if (savedDate && savedDate.includes('/')) {
+            const parts = savedDate.split('/');
+            if (parts.length === 3) {
+                savedDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+            }
+        }
+        
+        // フォーカス中であっても、現在空なら上書きする（表示消え対策）
+        if (document.activeElement !== goalDateInput || !goalDateInput.value) {
+            goalDateInput.value = savedDate;
+        }
+    }
 }
 
 function updateUI() {
