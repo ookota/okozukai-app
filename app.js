@@ -221,7 +221,8 @@ function expandCurrentUserData() {
         goalAmount: 1000,
         goalDate: '',
         goalReached: false,
-        pendingAmount: 0
+        pendingAmount: 0,
+        pendingItems: []
     };
 
     if (allUsersData[userKey]) {
@@ -230,6 +231,9 @@ function expandCurrentUserData() {
         // historyが壊れている場合の保護
         if (!Array.isArray(userData.history)) {
             userData.history = [];
+        }
+        if (!Array.isArray(userData.pendingItems)) {
+            userData.pendingItems = [];
         }
     } else {
         userData = defaultData;
@@ -270,7 +274,7 @@ function openHelpModal() {
         const btn = document.createElement('button');
         btn.className = `help-opt-btn ${task.special ? 'special' : ''}`;
         btn.innerHTML = `${task.icon} ${task.name}<br><small>${task.price}円</small>`;
-        btn.onclick = () => { closeModals(); confirmDeposit(task.price, task.name); };
+        btn.onclick = () => { closeModals(); confirmDeposit(task.price, task.name, task.icon); };
         helpOptionsContainer.appendChild(btn);
     });
     showPage('help-modal');
@@ -368,7 +372,7 @@ function confirmInput() {
     if (isNaN(amount) || amount <= 0) return;
     if (inputMode === 'withdraw' && userData.balance < amount) return alert('お金がたりないよ！');
 
-    if (inputMode === 'deposit') confirmDeposit(amount, 'そのた');
+    if (inputMode === 'deposit') confirmDeposit(amount, 'そのた', '✨');
     else if (inputMode === 'withdraw') {
         userData.balance -= amount;
         addHistoryRecord('withdraw', amount, 'つかった');
@@ -380,8 +384,12 @@ function confirmInput() {
     }
 }
 
-function confirmDeposit(amount, reason) {
+function confirmDeposit(amount, reason, icon) {
     userData.pendingAmount = (userData.pendingAmount || 0) + amount;
+    if (!userData.pendingItems) {
+        userData.pendingItems = [];
+    }
+    userData.pendingItems.push({ name: reason, amount: amount, icon: icon || '✨' });
     soundManager.playCoin();
     playSpecialEffect(reason === '英語テスト合格' ? '🎉合格おめでとう！🎉' : (currentUser === 'masamune' ? '出発進行！🚃' : 'レベルアップ！⭐'));
     saveAllData(); updateUI(); closeModals();
@@ -390,8 +398,18 @@ function confirmDeposit(amount, reason) {
 function claimPendingAmount() {
     if (!userData.pendingAmount) return alert('まだお金がないよ！');
     const amount = userData.pendingAmount;
-    userData.balance += amount; userData.pendingAmount = 0;
-    addHistoryRecord('deposit', amount, 'お手伝いでもらった');
+    userData.balance += amount; 
+    
+    if (userData.pendingItems && userData.pendingItems.length > 0) {
+        userData.pendingItems.forEach(item => {
+            addHistoryRecord('deposit', item.amount, `${item.icon || '✨'} ${item.name}`);
+        });
+    } else {
+        addHistoryRecord('deposit', amount, 'お手伝いでもらった');
+    }
+    
+    userData.pendingAmount = 0;
+    userData.pendingItems = [];
     playSpecialEffect('💰 お金をもらった！ 💰');
     updateUI();
 }
